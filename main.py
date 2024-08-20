@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import openpyxl
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk import ne_chunk, pos_tag
 
 class WebSleuth:
     def __init__(self):
@@ -14,6 +17,19 @@ class WebSleuth:
         self.other = []
         self.harvested = []
 
+    def nltk_test(self):
+        try:
+            nltk.data.find('tokenizers/punkt')
+            nltk.data.find('chunkers/maxent_ne_chunker')
+            nltk.data.find('taggers/averaged_perceptron_tagger')
+            nltk.data.find('corpora/words')
+        except LookupError:
+            nltk.download('punkt')
+            nltk.download('averaged_perceptron_tagger')
+            nltk.download('maxent_ne_chunker')
+            nltk.download('words')
+        print("NLTK packages are downloaded and ready to use.")
+
     def get_url(self):
         self.url = input("Enter a URL: ")
 
@@ -23,7 +39,19 @@ class WebSleuth:
             soup = BeautifulSoup(response.content, 'html.parser')
             nohtml = soup.get_text()
             urls = soup.find_all('a')
-            print("URLs found in the page:")
+            #print("URLs found in the page:")
+            #tokenize the text
+            words = word_tokenize(nohtml)
+            #tag the words
+            tagged = pos_tag(words)
+            #print(tagged)
+            #named entities
+            named_entities = ne_chunk(tagged)
+            #print(named_entities)
+            for name in named_entities:
+                if hasattr(name, 'label'):#if the name has a label
+                    self.names.append(name)
+
             for u in urls:
                 # Sorting out the URLs
                 if u.get('href') == None or u.get('href' in self.harvested):  # If the URL is empty
@@ -39,6 +67,7 @@ class WebSleuth:
                 else:  # If the URL is a partial URL
                     self.other.append(u.get('href')) 
                 self.harvested.append(u.get('href'))
+            
         else:
             print("Failed to retrieve the website")
 
@@ -50,7 +79,19 @@ class WebSleuth:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 nohtml = soup.get_text()
                 urls = soup.find_all('a')
-                print("URLs found in the page:")
+                #print("URLs found in the page:")
+                #tokenize the text
+                words = word_tokenize(nohtml)
+                #tag the words
+                tagged = pos_tag(words)
+                #print(tagged)
+                #named entities
+                named_entities = ne_chunk(tagged)
+                #print(named_entities)
+                for name in named_entities:
+                    if hasattr(name, 'label'):#if the name has a label
+                        self.names.append(name)
+
                 for u in urls:
                     # Sorting out the URLs
                     if u.get('href') == None or u.get('href') in self.harvested: # If the URL is empty
@@ -76,6 +117,7 @@ class WebSleuth:
         phone_sheet = workbook.create_sheet(title="Phone Numbers")
         email_sheet = workbook.create_sheet(title="Emails")
         file_sheet = workbook.create_sheet(title="Files")
+        name_sheet = workbook.create_sheet(title="Names")
 
         # Write data to the worksheets
         for url in self.urls:
@@ -89,10 +131,15 @@ class WebSleuth:
 
         for file in self.documents:
             file_sheet.append([file])
+        
+        for name in self.names:
+            name_sheet.append([name])
 
         # Save the workbook
         workbook.save("/home/user/Documents/WebSleuth/WebSleuth/output.xlsx")
+
     def main(self):
+        self.nltk_test()
         self.get_url()
         self.retrieve_website()
         self.SecondScan()
